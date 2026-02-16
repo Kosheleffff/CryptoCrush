@@ -406,7 +406,6 @@
             tg.expand();
         }
 
-        // Конфигурация криптовалют с SVG иконками из CDN
         const CRYPTOS = [
             { 
                 name: 'BTC', 
@@ -466,77 +465,32 @@
             { id: 8, title: 'Эффективность', description: 'Закончите уровень за 10 ходов', target: 1, current: 0, type: 'efficiency', reward: 4, claimed: false }
         ];
 
-        // Загрузка данных из Telegram Cloud Storage
-async function loadGameData() {
-    return new Promise((resolve) => {
-        if (!tg || !tg.CloudStorage) {
-            console.log('Telegram Cloud недоступен, используем localStorage');
-            // Fallback на localStorage
-            const saved = localStorage.getItem('cryptoCrushData');
-            if (saved) {
-                try {
+        // ИСПРАВЛЕНО: Загрузка данных из Telegram Cloud Storage
+        async function loadGameData() {
+            if (!tg || !tg.CloudStorage) {
+                const saved = localStorage.getItem('cryptoCrushData');
+                if (saved) {
                     const data = JSON.parse(saved);
                     quests = data.quests || quests;
                     boosters = data.boosters || boosters;
-                    console.log('Данные загружены из localStorage:', data);
-                } catch (e) {
-                    console.error('Ошибка парсинга localStorage:', e);
+                    level = data.level || 1;
+                    score = data.score || 0;
+                    moves = data.moves || 30;
+                    targetScore = data.targetScore || 1000;
                 }
+                return;
             }
-            resolve();
-            return;
-        }
-
-        try {
-            console.log('Загрузка из Telegram Cloud...');
-            const keys = ['quests', 'boosters'];
-            
-            tg.CloudStorage.getItems(keys, (error, result) => {
-                if (error) {
-                    console.error('Ошибка загрузки из Cloud:', error);
-                    resolve();
-                    return;
-                }
-                
-                if (result) {
-                    console.log('Данные из Telegram Cloud:', result);
-                    
-                    if (result.quests) {
-                        try {
-                            quests = JSON.parse(result.quests);
-                            console.log('Квесты загружены:', quests);
-                        } catch (e) {
-                            console.error('Ошибка парсинга квестов:', e);
-                        }
-                    }
-                    
-                    if (result.boosters) {
-                        boosters = parseInt(result.boosters) || 3;
-                        console.log('Бустеры загружены:', boosters);
-                    }
-                }
-                
-                resolve();
-            });
-        } catch (e) {
-            console.error('Ошибка загрузки из Telegram Cloud:', e);
-            resolve();
-        }
-    });
-}
 
             try {
-                // Загружаем данные из Telegram Cloud
-                const keys = ['quests', 'boosters'];
+                const keys = ['quests', 'boosters', 'level', 'score', 'moves', 'targetScore'];
                 tg.CloudStorage.getItems(keys, (error, result) => {
                     if (!error && result) {
-                        if (result.quests) {
-                            quests = JSON.parse(result.quests);
-                        }
-                        if (result.boosters) {
-                            boosters = parseInt(result.boosters);
-                        }
-                        // Обновляем UI после загрузки
+                        if (result.quests) quests = JSON.parse(result.quests);
+                        if (result.boosters) boosters = parseInt(result.boosters);
+                        if (result.level) level = parseInt(result.level);
+                        if (result.score) score = parseInt(result.score);
+                        if (result.moves) moves = parseInt(result.moves);
+                        if (result.targetScore) targetScore = parseInt(result.targetScore);
                         updateStats();
                     }
                 });
@@ -545,45 +499,33 @@ async function loadGameData() {
             }
         }
 
-        // Сохранение данных в Telegram Cloud Storage
-async function saveGameData() {
-    const data = {
-        quests: quests,
-        boosters: boosters,
-        highScore: getHighScore()
-    };
+        // ИСПРАВЛЕНО: Сохранение данных в Telegram Cloud Storage
+        async function saveGameData() {
+            const data = {
+                quests: quests,
+                boosters: boosters,
+                level: level,
+                score: score,
+                moves: moves,
+                targetScore: targetScore,
+                highScore: getHighScore()
+            };
 
-    console.log('Сохранение данных:', data);
+            localStorage.setItem('cryptoCrushData', JSON.stringify(data));
 
-    // Сохраняем в localStorage как запасной вариант
-    localStorage.setItem('cryptoCrushData', JSON.stringify(data));
+            if (!tg || !tg.CloudStorage) return;
 
-    if (!tg || !tg.CloudStorage) {
-        console.log('Telegram Cloud недоступен, сохранено только в localStorage');
-        return;
-    }
-
-    try {
-        // Сохраняем в Telegram Cloud
-        tg.CloudStorage.setItem('quests', JSON.stringify(quests), (error) => {
-            if (error) {
-                console.error('Ошибка сохранения квестов:', error);
-            } else {
-                console.log('Квесты сохранены в Cloud');
+            try {
+                tg.CloudStorage.setItem('quests', JSON.stringify(quests));
+                tg.CloudStorage.setItem('boosters', boosters.toString());
+                tg.CloudStorage.setItem('level', level.toString());
+                tg.CloudStorage.setItem('score', score.toString());
+                tg.CloudStorage.setItem('moves', moves.toString());
+                tg.CloudStorage.setItem('targetScore', targetScore.toString());
+            } catch (e) {
+                console.error('Ошибка сохранения в Telegram Cloud:', e);
             }
-        });
-
-        tg.CloudStorage.setItem('boosters', boosters.toString(), (error) => {
-            if (error) {
-                console.error('Ошибка сохранения бустеров:', error);
-            } else {
-                console.log('Бустеры сохранены в Cloud');
-            }
-        });
-    } catch (e) {
-        console.error('Ошибка сохранения в Telegram Cloud:', e);
-    }
-}
+        }
 
         function initBoard() {
             board = [];
@@ -692,6 +634,7 @@ async function saveGameData() {
             
             if (matches.length > 0) {
                 moves--;
+                saveGameData(); // ИСПРАВЛЕНО: Сохраняем после каждого хода
                 processMatches(matches);
             } else {
                 board[cell2.row][cell2.col] = board[cell1.row][cell1.col];
@@ -789,6 +732,7 @@ async function saveGameData() {
                 dropCells();
                 fillEmpty();
                 renderBoard();
+                saveGameData(); // ИСПРАВЛЕНО: Сохраняем после обработки матчей
                 
                 setTimeout(() => {
                     const newMatches = findMatches();
@@ -828,6 +772,7 @@ async function saveGameData() {
             }
         }
 
+        // ИСПРАВЛЕНО: Проверка завершения уровня
         function checkLevelComplete() {
             if (score >= targetScore) {
                 const levelMovesLeft = 30 - moves + (level - 1) * 20;
@@ -840,6 +785,8 @@ async function saveGameData() {
                 if (levelMovesLeft >= 20) {
                     updateQuest('efficiency', 1, true);
                 }
+                
+                saveGameData(); // ИСПРАВЛЕНО: Сохраняем сразу после повышения уровня
                 
                 alert(`🎉 Уровень ${level} пройден!\n+20 ходов\n+1 бустер`);
             }
@@ -881,6 +828,7 @@ async function saveGameData() {
             dropCells();
             fillEmpty();
             renderBoard();
+            saveGameData(); // ИСПРАВЛЕНО: Сохраняем после использования бустера
             
             setTimeout(() => {
                 const matches = findMatches();
@@ -888,8 +836,6 @@ async function saveGameData() {
                     processMatches(matches);
                 }
             }, 300);
-            
-            saveGameData();
         }
 
         function updateStats() {
@@ -904,13 +850,18 @@ async function saveGameData() {
             document.getElementById('progress').style.width = progress + '%';
         }
 
+        // ИСПРАВЛЕНО: Перезапуск игры
         function restartGame() {
             updateQuest('games', 1, true);
+            saveGameData(); // Сохраняем текущий прогресс квестов
+            
             score = 0;
             level = 1;
             moves = 30;
             combo = 0;
             targetScore = 1000;
+            
+            saveGameData(); // Сохраняем сброшенные значения
             initBoard();
         }
 
@@ -992,14 +943,12 @@ async function saveGameData() {
                 date: new Date().toISOString()
             };
 
-            // Сохраняем в localStorage
             const leaderboard = JSON.parse(localStorage.getItem('cryptoCrushLeaderboard') || '[]');
             leaderboard.push(entry);
             leaderboard.sort((a, b) => b.score - a.score);
             leaderboard.splice(10);
             localStorage.setItem('cryptoCrushLeaderboard', JSON.stringify(leaderboard));
 
-            // Сохраняем в Telegram Cloud
             if (tg && tg.CloudStorage) {
                 try {
                     tg.CloudStorage.setItem('leaderboard', JSON.stringify(leaderboard), (error) => {
@@ -1025,14 +974,12 @@ async function saveGameData() {
 
             let leaderboard = [];
 
-            // Пытаемся загрузить из Telegram Cloud
             if (tg && tg.CloudStorage) {
                 try {
                     tg.CloudStorage.getItem('leaderboard', (error, result) => {
                         if (!error && result) {
                             leaderboard = JSON.parse(result);
                         } else {
-                            // Fallback на localStorage
                             leaderboard = JSON.parse(localStorage.getItem('cryptoCrushLeaderboard') || '[]');
                         }
                         displayLeaderboard(leaderboard, leaderboardList);
@@ -1043,7 +990,6 @@ async function saveGameData() {
                 }
             }
 
-            // Если Telegram API недоступен
             leaderboard = JSON.parse(localStorage.getItem('cryptoCrushLeaderboard') || '[]');
             displayLeaderboard(leaderboard, leaderboardList);
         }
@@ -1077,21 +1023,12 @@ async function saveGameData() {
             document.getElementById(modalId).classList.remove('active');
         }
 
-       // Инициализация игры
-async function init() {
-    // Показываем индикатор загрузки
-    const boardElement = document.getElementById('gameBoard');
-    boardElement.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #667eea; font-size: 18px;">⏳ Загрузка...</div>';
-    
-    // Ждем загрузки данных
-    await new Promise(resolve => setTimeout(resolve, 500)); // Даем время на инициализацию Telegram API
-    await loadGameData();
-    
-    // Запускаем игру
-    initBoard();
-}
+        async function init() {
+            await loadGameData();
+            initBoard();
+        }
 
-init();
+        init();
 
         document.addEventListener('gesturestart', function (e) {
             e.preventDefault();
