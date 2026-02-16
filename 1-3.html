@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Crypto Crush</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .game-container {
+            max-width: 500px;
+            width: 100%;
+            padding: 10px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 3px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s;
+        }
+
+        .board-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin-bottom: 10px;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            background: #f0f0f0;
+            padding: 8px;
+            border-radius: 10px;
+            touch-action: none;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            position: relative;
+            user-select: none;
+        }
+
+        .cell:active {
+            transform: scale(0.95);
+        }
+
+        .cell.selected {
+            box-shadow: 0 0 0 3px #667eea;
+            transform: scale(1.05);
+        }
+
+        .cell.matched {
+            animation: pulse 0.3s;
+        }
+
+        .crypto-icon {
+            width: 80%;
+            height: 80%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .crypto-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 12px;
+            padding: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            color: #667eea;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #667eea;
+            text-align: center;
+        }
+
+        .quest-item {
+            background: #f5f5f5;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .quest-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .quest-title {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .quest-reward {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .quest-progress {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .quest-bar {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .quest-bar-fill {
+            height: 100%;
+            background: #667eea;
+            transition: width 0.3s;
+        }
+
+        .quest-completed {
+            opacity: 0.6;
+        }
+
+        .claim-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 8px;
+            width: 100%;
+        }
+
+        .claim-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .close-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .combo-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+            z-index: 999;
+            animation: comboAnim 1s ease-out;
+        }
+
+        @keyframes comboAnim {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .leaderboard-rank {
+            font-weight: bold;
+            color: #667eea;
+            min-width: 30px;
+        }
+
+        .leaderboard-name {
+            flex: 1;
+            margin: 0 10px;
+        }
+
+        .leaderboard-score {
+            font-weight: bold;
+            color: #764ba2;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #FFD700;
+            color: #333;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-label">Очки</div>
+                    <div class="stat-value" id="score">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Уровень</div>
+                    <div class="stat-value" id="level">1</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Ходы</div>
+                    <div class="stat-value" id="moves">30</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Бустеры</div>
+                    <div class="stat-value" id="boosters">3</div>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress"></div>
+            </div>
+        </div>
+
+        <div class="board-container">
+            <div class="game-board" id="gameBoard"></div>
+        </div>
+
+        <div class="buttons">
+            <button class="btn" onclick="showQuests()">📋 Задания</button>
+            <button class="btn" onclick="showLeaderboard()">🏆 Лидеры</button>
+            <button class="btn" onclick="useBooster()" id="boosterBtn">⚡ Бустер (3)</button>
+            <button class="btn" onclick="restartGame()">🔄 Новая игра</button>
+        </div>
+    </div>
+
+    <div class="modal" id="questModal">
+        <div class="modal-content">
+            <div class="modal-title">📋 Задания</div>
+            <div id="questList"></div>
+            <button class="close-btn" onclick="closeModal('questModal')">Закрыть</button>
+        </div>
+    </div>
+
+    <div class="modal" id="leaderboardModal">
+        <div class="modal-content">
+            <div class="modal-title">🏆 Таблица лидеров</div>
+            <div id="leaderboardList"></div>
+            <button class="close-btn" onclick="closeModal('leaderboardModal')">Закрыть</button>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.ready();
+            tg.expand();
+        }
+
+        // Конфигурация криптовалют с SVG иконками из CDN
+        const CRYPTOS = [
+            { 
+                name: 'BTC', 
+                icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.svg',
+                color: '#F7931A' 
+            },
+            { 
+                name: 'ETH', 
+                icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.svg',
+                color: '#627EEA' 
+            },
+            { 
+                name: 'BNB', 
+                icon: 'https://cryptologos.cc/logos/bnb-bnb-logo.svg',
+                color: '#F3BA2F' 
+            },
+            { 
+                name: 'SOL', 
+                icon: 'https://cryptologos.cc/logos/solana-sol-logo.svg',
+                color: '#14F195' 
+            },
+            { 
+                name: 'USDT', 
+                icon: 'https://cryptologos.cc/logos/tether-usdt-logo.svg',
+                color: '#26A17B' 
+            },
+            { 
+                name: 'XRP', 
+                icon: 'https://cryptologos.cc/logos/xrp-xrp-logo.svg',
+                color: '#23292F' 
+            },
+            { 
+                name: 'TON', 
+                icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Gram_cryptocurrency_logo.svg/250px-Gram_cryptocurrency_logo.svg.png',
+                color: '#0088CC' 
+            }
+        ];
+
+        const BOARD_SIZE = 8;
+        let board = [];
+        let selectedCell = null;
+        let score = 0;
+        let level = 1;
+        let moves = 30;
+        let boosters = 3;
+        let combo = 0;
+        let targetScore = 1000;
+
+        let quests = [
+            { id: 1, title: 'Первые шаги', description: 'Наберите 500 очков', target: 500, current: 0, type: 'score', reward: 2, claimed: false },
+            { id: 2, title: 'Мастер комбо', description: 'Сделайте комбо x3', target: 3, current: 0, type: 'combo', reward: 1, claimed: false },
+            { id: 3, title: 'Собиратель BTC', description: 'Уничтожьте 50 BTC', target: 50, current: 0, type: 'btc', reward: 3, claimed: false },
+            { id: 4, title: 'Покоритель уровней', description: 'Достигните 5 уровня', target: 5, current: 1, type: 'level', reward: 5, claimed: false },
+            { id: 5, title: 'Марафонец', description: 'Сыграйте 10 игр', target: 10, current: 0, type: 'games', reward: 3, claimed: false },
+            { id: 6, title: 'Большой матч', description: 'Сделайте матч из 5+ монет', target: 1, current: 0, type: 'bigmatch', reward: 2, claimed: false },
+            { id: 7, title: 'Миллионер', description: 'Наберите 10000 очков за игру', target: 10000, current: 0, type: 'score', reward: 10, claimed: false },
+            { id: 8, title: 'Эффективность', description: 'Закончите уровень за 10 ходов', target: 1, current: 0, type: 'efficiency', reward: 4, claimed: false }
+        ];
+
+        // Загрузка данных из Telegram Cloud Storage
+        async function loadGameData() {
+            if (!tg || !tg.CloudStorage) {
+                // Fallback на localStorage если Telegram API недоступен
+                const saved = localStorage.getItem('cryptoCrushData');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    quests = data.quests || quests;
+                    boosters = data.boosters || boosters;
+                }
+                return;
+            }
+
+            try {
+                // Загружаем данные из Telegram Cloud
+                const keys = ['quests', 'boosters'];
+                tg.CloudStorage.getItems(keys, (error, result) => {
+                    if (!error && result) {
+                        if (result.quests) {
+                            quests = JSON.parse(result.quests);
+                        }
+                        if (result.boosters) {
+                            boosters = parseInt(result.boosters);
+                        }
+                        // Обновляем UI после загрузки
+                        updateStats();
+                    }
+                });
+            } catch (e) {
+                console.error('Ошибка загрузки из Telegram Cloud:', e);
+            }
+        }
+
+        // Сохранение данных в Telegram Cloud Storage
+        async function saveGameData() {
+            const data = {
+                quests: quests,
+                boosters: boosters,
+                highScore: getHighScore()
+            };
+
+            // Сохраняем в localStorage как запасной вариант
+            localStorage.setItem('cryptoCrushData', JSON.stringify(data));
+
+            if (!tg || !tg.CloudStorage) {
+                return; // Если Telegram API недоступен, используем только localStorage
+            }
+
+            try {
+                // Сохраняем в Telegram Cloud
+                tg.CloudStorage.setItem('quests', JSON.stringify(quests), (error, result) => {
+                    if (error) console.error('Ошибка сохранения квестов:', error);
+                });
+
+                tg.CloudStorage.setItem('boosters', boosters.toString(), (error, result) => {
+                    if (error) console.error('Ошибка сохранения бустеров:', error);
+                });
+            } catch (e) {
+                console.error('Ошибка сохранения в Telegram Cloud:', e);
+            }
+        }
+
+        function initBoard() {
+            board = [];
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                board[i] = [];
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    board[i][j] = getRandomCrypto();
+                }
+            }
+            removeInitialMatches();
+            renderBoard();
+        }
+
+        function getRandomCrypto() {
+            return CRYPTOS[Math.floor(Math.random() * CRYPTOS.length)];
+        }
+
+        function removeInitialMatches() {
+            let hasMatches = true;
+            while (hasMatches) {
+                hasMatches = false;
+                for (let i = 0; i < BOARD_SIZE; i++) {
+                    for (let j = 0; j < BOARD_SIZE; j++) {
+                        if (checkMatchAt(i, j)) {
+                            board[i][j] = getRandomCrypto();
+                            hasMatches = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        function checkMatchAt(row, col) {
+            const crypto = board[row][col];
+            if (col >= 2 && board[row][col-1].name === crypto.name && board[row][col-2].name === crypto.name) {
+                return true;
+            }
+            if (row >= 2 && board[row-1][col].name === crypto.name && board[row-2][col].name === crypto.name) {
+                return true;
+            }
+            return false;
+        }
+
+        function renderBoard() {
+            const boardElement = document.getElementById('gameBoard');
+            boardElement.innerHTML = '';
+            
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    
+                    const icon = document.createElement('div');
+                    icon.className = 'crypto-icon';
+                    
+                    const img = document.createElement('img');
+                    img.src = board[i][j].icon;
+                    img.alt = board[i][j].name;
+                    img.loading = 'lazy';
+                    
+                    icon.appendChild(img);
+                    cell.appendChild(icon);
+                    cell.addEventListener('click', () => handleCellClick(i, j));
+                    boardElement.appendChild(cell);
+                }
+            }
+            updateStats();
+        }
+
+        function handleCellClick(row, col) {
+            if (moves <= 0) return;
+
+            const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            
+            if (!selectedCell) {
+                selectedCell = { row, col };
+                cell.classList.add('selected');
+            } else {
+                const prevCell = document.querySelector(`[data-row="${selectedCell.row}"][data-col="${selectedCell.col}"]`);
+                prevCell.classList.remove('selected');
+                
+                if (isAdjacent(selectedCell, { row, col })) {
+                    swapCells(selectedCell, { row, col });
+                    selectedCell = null;
+                } else {
+                    selectedCell = { row, col };
+                    cell.classList.add('selected');
+                }
+            }
+        }
+
+        function isAdjacent(cell1, cell2) {
+            const rowDiff = Math.abs(cell1.row - cell2.row);
+            const colDiff = Math.abs(cell1.col - cell2.col);
+            return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+        }
+
+        function swapCells(cell1, cell2) {
+            const temp = board[cell1.row][cell1.col];
+            board[cell1.row][cell1.col] = board[cell2.row][cell2.col];
+            board[cell2.row][cell2.col] = temp;
+            
+            const matches = findMatches();
+            
+            if (matches.length > 0) {
+                moves--;
+                processMatches(matches);
+            } else {
+                board[cell2.row][cell2.col] = board[cell1.row][cell1.col];
+                board[cell1.row][cell1.col] = temp;
+                renderBoard();
+            }
+        }
+
+        function findMatches() {
+            const matches = [];
+            const processed = new Set();
+            
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE - 2; j++) {
+                    const current = board[i][j];
+                    let matchLength = 1;
+                    
+                    while (j + matchLength < BOARD_SIZE && board[i][j + matchLength].name === current.name) {
+                        matchLength++;
+                    }
+                    
+                    if (matchLength >= 3) {
+                        for (let k = 0; k < matchLength; k++) {
+                            const key = `${i}-${j + k}`;
+                            if (!processed.has(key)) {
+                                matches.push({ row: i, col: j + k, crypto: current, length: matchLength });
+                                processed.add(key);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            for (let j = 0; j < BOARD_SIZE; j++) {
+                for (let i = 0; i < BOARD_SIZE - 2; i++) {
+                    const current = board[i][j];
+                    let matchLength = 1;
+                    
+                    while (i + matchLength < BOARD_SIZE && board[i + matchLength][j].name === current.name) {
+                        matchLength++;
+                    }
+                    
+                    if (matchLength >= 3) {
+                        for (let k = 0; k < matchLength; k++) {
+                            const key = `${i + k}-${j}`;
+                            if (!processed.has(key)) {
+                                matches.push({ row: i + k, col: j, crypto: current, length: matchLength });
+                                processed.add(key);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return matches;
+        }
+
+        function processMatches(matches) {
+            if (matches.length === 0) return;
+            
+            const basePoints = matches.length * 10;
+            combo++;
+            const comboBonus = combo > 1 ? combo * 20 : 0;
+            const matchBonus = matches.some(m => m.length >= 5) ? 100 : 0;
+            
+            const earnedPoints = basePoints + comboBonus + matchBonus;
+            score += earnedPoints;
+            
+            updateQuest('score', score);
+            if (combo >= 3) updateQuest('combo', combo);
+            
+            matches.forEach(match => {
+                if (match.crypto.name === 'BTC') {
+                    updateQuest('btc', 1, true);
+                }
+                if (match.length >= 5) {
+                    updateQuest('bigmatch', 1, true);
+                }
+            });
+            
+            matches.forEach(match => {
+                const cell = document.querySelector(`[data-row="${match.row}"][data-col="${match.col}"]`);
+                if (cell) cell.classList.add('matched');
+            });
+            
+            if (combo > 1) {
+                showComboText(`COMBO x${combo}!`);
+            }
+            
+            setTimeout(() => {
+                matches.forEach(match => {
+                    board[match.row][match.col] = null;
+                });
+                
+                dropCells();
+                fillEmpty();
+                renderBoard();
+                
+                setTimeout(() => {
+                    const newMatches = findMatches();
+                    if (newMatches.length > 0) {
+                        processMatches(newMatches);
+                    } else {
+                        combo = 0;
+                        checkLevelComplete();
+                        checkGameOver();
+                    }
+                }, 300);
+            }, 300);
+        }
+
+        function dropCells() {
+            for (let j = 0; j < BOARD_SIZE; j++) {
+                let emptyRow = BOARD_SIZE - 1;
+                for (let i = BOARD_SIZE - 1; i >= 0; i--) {
+                    if (board[i][j] !== null) {
+                        if (i !== emptyRow) {
+                            board[emptyRow][j] = board[i][j];
+                            board[i][j] = null;
+                        }
+                        emptyRow--;
+                    }
+                }
+            }
+        }
+
+        function fillEmpty() {
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === null) {
+                        board[i][j] = getRandomCrypto();
+                    }
+                }
+            }
+        }
+
+        function checkLevelComplete() {
+            if (score >= targetScore) {
+                const levelMovesLeft = 30 - moves + (level - 1) * 20;
+                level++;
+                targetScore = level * 1000;
+                moves += 20;
+                boosters++;
+                updateQuest('level', level);
+                
+                if (levelMovesLeft >= 20) {
+                    updateQuest('efficiency', 1, true);
+                }
+                
+                alert(`🎉 Уровень ${level} пройден!\n+20 ходов\n+1 бустер`);
+            }
+        }
+
+        function checkGameOver() {
+            if (moves <= 0 && score < targetScore) {
+                updateQuest('games', 1, true);
+                saveToLeaderboard(score);
+                saveGameData();
+                
+                setTimeout(() => {
+                    if (confirm(`Игра окончена!\n\nОчки: ${score}\nУровень: ${level}\n\nНачать новую игру?`)) {
+                        restartGame();
+                    }
+                }, 500);
+            }
+        }
+
+        function useBooster() {
+            if (boosters <= 0) {
+                alert('❌ Бустеры закончились! Выполняйте задания чтобы получить больше.');
+                return;
+            }
+            
+            boosters--;
+            moves += 5;
+            
+            let removed = 0;
+            while (removed < 5) {
+                const row = Math.floor(Math.random() * BOARD_SIZE);
+                const col = Math.floor(Math.random() * BOARD_SIZE);
+                if (board[row][col] !== null) {
+                    board[row][col] = null;
+                    removed++;
+                }
+            }
+            
+            dropCells();
+            fillEmpty();
+            renderBoard();
+            
+            setTimeout(() => {
+                const matches = findMatches();
+                if (matches.length > 0) {
+                    processMatches(matches);
+                }
+            }, 300);
+            
+            saveGameData();
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+            document.getElementById('moves').textContent = moves;
+            document.getElementById('boosters').textContent = boosters;
+            document.getElementById('boosterBtn').textContent = `⚡ Бустер (${boosters})`;
+            document.getElementById('boosterBtn').disabled = boosters <= 0;
+            
+            const progress = Math.min((score / targetScore) * 100, 100);
+            document.getElementById('progress').style.width = progress + '%';
+        }
+
+        function restartGame() {
+            updateQuest('games', 1, true);
+            score = 0;
+            level = 1;
+            moves = 30;
+            combo = 0;
+            targetScore = 1000;
+            initBoard();
+        }
+
+        function updateQuest(type, value, increment = false) {
+            quests.forEach(quest => {
+                if (quest.type === type && !quest.claimed) {
+                    if (increment) {
+                        quest.current += value;
+                    } else {
+                        quest.current = Math.max(quest.current, value);
+                    }
+                }
+            });
+            saveGameData();
+        }
+
+        function showQuests() {
+            const modal = document.getElementById('questModal');
+            const questList = document.getElementById('questList');
+            questList.innerHTML = '';
+            
+            quests.forEach(quest => {
+                const progress = Math.min((quest.current / quest.target) * 100, 100);
+                const isCompleted = quest.current >= quest.target;
+                const canClaim = isCompleted && !quest.claimed;
+                
+                const questDiv = document.createElement('div');
+                questDiv.className = 'quest-item' + (quest.claimed ? ' quest-completed' : '');
+                questDiv.innerHTML = `
+                    <div class="quest-header">
+                        <div class="quest-title">${quest.title}</div>
+                        <div class="quest-reward">+${quest.reward} бустер${quest.reward > 1 ? 'а' : ''}</div>
+                    </div>
+                    <div class="quest-progress">${quest.description}: ${quest.current}/${quest.target}</div>
+                    <div class="quest-bar">
+                        <div class="quest-bar-fill" style="width: ${progress}%"></div>
+                    </div>
+                    ${canClaim ? `<button class="claim-btn" onclick="claimQuest(${quest.id})">✅ Получить награду</button>` : ''}
+                    ${quest.claimed ? '<div style="text-align: center; color: #4CAF50; margin-top: 8px; font-weight: bold;">✓ Выполнено</div>' : ''}
+                `;
+                questList.appendChild(questDiv);
+            });
+            
+            modal.classList.add('active');
+        }
+
+        function claimQuest(questId) {
+            const quest = quests.find(q => q.id === questId);
+            if (quest && quest.current >= quest.target && !quest.claimed) {
+                quest.claimed = true;
+                boosters += quest.reward;
+                updateStats();
+                saveGameData();
+                showQuests();
+                alert(`🎁 Получено ${quest.reward} бустер${quest.reward > 1 ? 'а' : ''}!`);
+            }
+        }
+
+        function showComboText(text) {
+            const comboDiv = document.createElement('div');
+            comboDiv.className = 'combo-text';
+            comboDiv.textContent = text;
+            document.body.appendChild(comboDiv);
+            
+            setTimeout(() => {
+                comboDiv.remove();
+            }, 1000);
+        }
+
+        async function saveToLeaderboard(finalScore) {
+            const userName = tg?.initDataUnsafe?.user?.first_name || 'Игрок';
+            const userId = tg?.initDataUnsafe?.user?.id || 'local';
+            
+            const entry = {
+                id: userId,
+                name: userName,
+                score: finalScore,
+                level: level,
+                date: new Date().toISOString()
+            };
+
+            // Сохраняем в localStorage
+            const leaderboard = JSON.parse(localStorage.getItem('cryptoCrushLeaderboard') || '[]');
+            leaderboard.push(entry);
+            leaderboard.sort((a, b) => b.score - a.score);
+            leaderboard.splice(10);
+            localStorage.setItem('cryptoCrushLeaderboard', JSON.stringify(leaderboard));
+
+            // Сохраняем в Telegram Cloud
+            if (tg && tg.CloudStorage) {
+                try {
+                    tg.CloudStorage.setItem('leaderboard', JSON.stringify(leaderboard), (error) => {
+                        if (error) console.error('Ошибка сохранения лидерборда:', error);
+                    });
+                } catch (e) {
+                    console.error('Ошибка:', e);
+                }
+            }
+        }
+
+        function getHighScore() {
+            const leaderboard = JSON.parse(localStorage.getItem('cryptoCrushLeaderboard') || '[]');
+            return leaderboard.length > 0 ? leaderboard[0].score : 0;
+        }
+
+        async function showLeaderboard() {
+            const modal = document.getElementById('leaderboardModal');
+            const leaderboardList = document.getElementById('leaderboardList');
+            
+            leaderboardList.innerHTML = '<div style="text-align: center; padding: 20px;">Загрузка...</div>';
+            modal.classList.add('active');
+
+            let leaderboard = [];
+
+            // Пытаемся загрузить из Telegram Cloud
+            if (tg && tg.CloudStorage) {
+                try {
+                    tg.CloudStorage.getItem('leaderboard', (error, result) => {
+                        if (!error && result) {
+                            leaderboard = JSON.parse(result);
+                        } else {
+                            // Fallback на localStorage
+                            leaderboard = JSON.parse(localStorage.getItem('cryptoCrushLeaderboard') || '[]');
+                        }
+                        displayLeaderboard(leaderboard, leaderboardList);
+                    });
+                    return;
+                } catch (e) {
+                    console.error('Ошибка загрузки лидерборда:', e);
+                }
+            }
+
+            // Если Telegram API недоступен
+            leaderboard = JSON.parse(localStorage.getItem('cryptoCrushLeaderboard') || '[]');
+            displayLeaderboard(leaderboard, leaderboardList);
+        }
+
+        function displayLeaderboard(leaderboard, leaderboardList) {
+            leaderboardList.innerHTML = '';
+            
+            if (leaderboard.length === 0) {
+                leaderboardList.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">Пока нет результатов</div>';
+            } else {
+                leaderboard.forEach((entry, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'leaderboard-item';
+                    
+                    let badge = '';
+                    if (index === 0) badge = '<span class="badge">🥇</span>';
+                    else if (index === 1) badge = '<span class="badge">🥈</span>';
+                    else if (index === 2) badge = '<span class="badge">🥉</span>';
+                    
+                    item.innerHTML = `
+                        <div class="leaderboard-rank">#${index + 1}</div>
+                        <div class="leaderboard-name">${entry.name} ${badge}</div>
+                        <div class="leaderboard-score">${entry.score}</div>
+                    `;
+                    leaderboardList.appendChild(item);
+                });
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Инициализация игры
+        async function init() {
+            await loadGameData();
+            initBoard();
+        }
+
+        init();
+
+        document.addEventListener('gesturestart', function (e) {
+            e.preventDefault();
+        });
+    </script>
+</body>
+</html>
